@@ -1,8 +1,11 @@
 import random
 
 from pony import orm
-from pony.orm import Required, PrimaryKey, db_session, select, count
+from pony.orm import Required, PrimaryKey, db_session
 from datetime import datetime
+import time
+import os
+import logging
 
 database = orm.Database()
 
@@ -19,34 +22,32 @@ class WorkUnit(database.Entity):
 
 
 @db_session
-def create_work_unit(units_of_work_created: int):
-    if units_of_work_created % 100 == 0:
-        unit = WorkUnit(batch_id=1,
-                        timestamp=datetime.now(),
-                        tool_id="TID_a",
-                        cup_pressure_lower_limit=0.3,
-                        cup_pressure_upper_limit=0.5,
-                        air_cap_pressure_lower_limit=0.21,
-                        air_cap_pressure_upper_limit=0.63)
+def run():
+    batch_id = WorkUnit.select().count() // 1000 + 1
+    while True:
+        logging.warning("Painting a new unit ...")
+        time.sleep(int(os.getenv('TIME_PRINTING')))
+        cup_pressure_lower_limit = random.uniform(0, 0.5)
+        air_cap_pressure_lower_limit = random.uniform(0, 0.5)
+        unit = WorkUnit(
+            batch_id=batch_id,
+            timestamp=datetime.now(),
+            tool_id="TID_a",
+            cup_pressure_lower_limit=cup_pressure_lower_limit,
+            cup_pressure_upper_limit=cup_pressure_lower_limit + random.uniform(0, 0.4),
+            air_cap_pressure_lower_limit=air_cap_pressure_lower_limit,
+            air_cap_pressure_upper_limit=air_cap_pressure_lower_limit + random.uniform(0, 0.4))
+        database.commit()
+        logging.warning("Painted unit of work with id = {} cup pressure = ({}, {}) air cap pressure = ({}, {})".format(
+            str(unit.part_id), str(unit.cup_pressure_lower_limit), str(unit.cup_pressure_upper_limit),
+            str(unit.air_cap_pressure_lower_limit), str(unit.air_cap_pressure_upper_limit)))
+        if unit.part_id % 1000 == 0:
+            batch_id += 1
 
 
 if __name__ == '__main__':
-    database.bind(provider='mysql', host='192.168.0.26', port=13306, user='root', passwd='password', db='msg')
+    time.sleep(10)
+    database.bind(provider='mysql', host='192.168.0.26',
+                  port=13306, user='root', passwd='password', db='msg')
     database.generate_mapping(create_tables=True)
-    units_of_work_created = 0
-    with db_session:
-        batch_id = WorkUnit.select().count() // 1000 + 1
-        while True:
-            if batch_id % 1000 == 0:
-                batch_id += 1
-            cup_pressure_lower_limit = random.uniform(0, 0.5)
-            air_cap_pressure_lower_limit = random.uniform(0, 0.5)
-            unit = WorkUnit(batch_id=batch_id,
-                            timestamp=datetime.now(),
-                            tool_id="TID_a",
-                            cup_pressure_lower_limit=cup_pressure_lower_limit,
-                            cup_pressure_upper_limit=cup_pressure_lower_limit + random.uniform(0, 0.4),
-                            air_cap_pressure_lower_limit=air_cap_pressure_lower_limit,
-                            air_cap_pressure_upper_limit=air_cap_pressure_lower_limit + random.uniform(0, 0.4))
-            database.commit()
-            print("Creating unit of work with id = {}".format(str(unit.part_id)))
+    run()

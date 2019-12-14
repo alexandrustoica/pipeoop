@@ -21,7 +21,10 @@ services:
 
   machine-engine-generator:
     build: ./machine-generator
-    image: machine-engine-generator:current
+    image: machine-engine-generator:new
+    restart: on-failure
+    environment:
+      TIME_PRINTING: 0
     ports:
       - "3052:3052"
     networks:
