@@ -1,0 +1,3 @@
+pony
+mysqlclient
+mysql-connector-python
