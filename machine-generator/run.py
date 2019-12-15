@@ -47,7 +47,12 @@ def run():
 
 if __name__ == '__main__':
     time.sleep(10)
-    database.bind(provider='mysql', host='192.168.0.26',
-                  port=13306, user='root', passwd='password', db='msg')
+    database.bind(
+        provider='mysql',
+        host=os.getenv('DB_HOST'),
+        port=int(os.getenv('DB_PORT')),
+        user=os.getenv('DB_USERNAME'),
+        passwd=os.getenv('DB_PASSWORD'),
+        db=os.getenv('DB_DATABASE'))
     database.generate_mapping(create_tables=True)
     run()

@@ -4,8 +4,11 @@ services:
 
   machine-engine-db:
     image: mysql:5.7
+    tty: true
+    stdin_open: true
+    privileged: true
     ports:
-      - "13306:3306"
+      - 13306:3306
     restart: always
     command: --default-authentication-plugin=mysql_native_password
     environment:
@@ -24,9 +27,56 @@ services:
     image: machine-engine-generator:new
     restart: on-failure
     environment:
-      TIME_PRINTING: 0
+      DB_HOST: 192.168.0.26
+      DB_USERNAME: root
+      DB_PASSWORD: password
+      DB_DATABASE: msg
+      DB_PORT: 13306
+      TIME_PRINTING: 30
     ports:
-      - "3052:3052"
+      - 3052:3052
+    networks:
+      - machine-engine
+    depends_on:
+      - machine-engine-db
+    links:
+      - machine-engine-db:mysql
+
+  cloudera-service:
+    image: cloudera/quickstart:latest
+    privileged: true
+    environment:
+      DB_HOST: 192.168.0.26
+      DB_USERNAME: root
+      DB_PASSWORD: password
+      DB_DATABASE: msg
+      DB_PORT: 13306
+    volumes:
+      - cloudera:/var/lib
+    tty: true
+    stdin_open: true
+    hostname: quickstart.cloudera
+    command: /usr/bin/docker-quickstart
+    ports:
+      - "8020:8020"   # HDFS
+      - "8022:22"     # SSH
+      - "7180:7180"   # Cloudera Manager
+      - "8888:8888"   # Hue
+      - "11000:11000" # Oozie
+      - "50070:50070" # HDFS Rest Namenode
+      - "50075:50075" # HDFS Rest Datanode
+      - "2181:2181"   # Zookeeper
+      - "8088:8088"   # YARN Resource Manager
+      - "19888:19888" # MapReduce Job History
+      - "50030:50030" # MapReduce Job Tracker
+      - "8983:8983"   # Solr
+      - "16000:16000" # Sqoop Metastore
+      - "8042:8042"   # YARN Node Manager
+      - "60010:60010" # HBase Master
+      - "60030:60030" # HBase Region
+      - "9090:9090"   # HBase Thrift
+      - "8080:8080"   # HBase Rest
+      - "7077:7077"   # Spark Master
     networks:
       - machine-engine
     depends_on:
@@ -36,6 +86,7 @@ services:
 
 volumes:
   machine-db:
+  cloudera:
 
 networks:
   machine-engine:
