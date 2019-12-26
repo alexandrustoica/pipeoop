@@ -1,6 +1,6 @@
 # pipeoop
 
-`pipeoop` is a real-time and batch data processing pipeline for an industrial spray painting gun machine.
+`pipeoop` is a real-time and batch data processing pipeline for an industrial spray painting gun machine. [Design Specs - WIP](https://github.com/alexandrustoica/pipeoop/wiki)
 
 ## How to contribute
 
