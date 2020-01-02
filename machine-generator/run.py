@@ -10,23 +10,23 @@ import logging
 database = orm.Database()
 
 
-class Pressure(database.Entity):
-    id = PrimaryKey(int, auto=True)
-    value = Required(float)
-    lower_limit = Required(float)
-    upper_limit = Required(float)
-    cup_work_unit = Optional("WorkUnit", reverse="cup_pressure")
-    air_work_unit = Optional("WorkUnit", reverse="air_cap_pressure")
-
-
 class WorkUnit(database.Entity):
     part_id = PrimaryKey(int, auto=True)
     batch_id = Required(int)
     timestamp = Required(datetime)
     tool_id = Required(str)
-    cup_pressure = Required(Pressure)
-    air_cap_pressure = Required(Pressure)
+    cup_pressure = Required(float)
+    lower_cup_pressure = Required(float)
+    upper_cup_pressure = Required(float)
+    air_pressure = Required(float)
+    lower_air_pressure = Required(float)
+    upper_air_pressure = Required(float)
     error = Optional("PressureError")
+
+    @property
+    def error_code(self) -> int:
+        return 0 if self.lower_cup_pressure < self.cup_pressure < self.upper_cup_pressure else 1 + 0 \
+            if self.lower_air_pressure < self.air_pressure < self.upper_air_pressure else 2
 
 
 class PressureError(database.Entity):
@@ -37,46 +37,38 @@ class PressureError(database.Entity):
 
 @db_session
 def run():
-    # TODO: Refactor and improve error generator
-    batch_id = WorkUnit.select().count() // 1000 + 1
+    batch_size = int(os.getenv('BATCH_SIZE'))
+    batch_id = WorkUnit.select().count() // batch_size + 1
+    lower_cup_pressure, upper_cup_pressure = \
+        0.5 - random.uniform(0, 0.5), 1 - random.uniform(0, 0.5)
+    lower_air_pressure, upper_air_pressure = \
+        0.5 - random.uniform(0, 0.5), 1 - random.uniform(0, 0.5)
     while True:
         logging.warning("Painting a new unit ...")
         time.sleep(int(os.getenv('TIME_PRINTING')))
-        cup_pressure_lower_limit = random.uniform(0, 0.5)
-        air_cap_pressure_lower_limit = random.uniform(0, 0.5)
-        cup_pressure = Pressure(
-            value=random.uniform(0, 1),
-            lower_limit=cup_pressure_lower_limit,
-            upper_limit=random.uniform(0, 0.4) + cup_pressure_lower_limit
-        )
-        air_cap_pressure = Pressure(
-            value=random.uniform(0, 1),
-            lower_limit=air_cap_pressure_lower_limit,
-            upper_limit=random.uniform(0, 0.4) + air_cap_pressure_lower_limit
-        )
         unit = WorkUnit(
             batch_id=batch_id,
             timestamp=datetime.now(),
-            tool_id="TID_a",
-            cup_pressure=cup_pressure,
-            air_cap_pressure=air_cap_pressure)
-        error_code = 1 \
-            if cup_pressure.value < cup_pressure.lower_limit or \
-               cup_pressure.value > cup_pressure.upper_limit else 0 + 2 \
-            if air_cap_pressure.value < air_cap_pressure.lower_limit or \
-               air_cap_pressure.value > air_cap_pressure.upper_limit else 0
-        if error_code != 0:
-            error = PressureError(work_unit=unit, code=error_code)
+            tool_id=random.choice(["TID_A", "TID_B"]),
+            cup_pressure=random.uniform(0, 1),
+            air_pressure=random.uniform(0, 1),
+            lower_cup_pressure=lower_cup_pressure,
+            upper_cup_pressure=upper_cup_pressure,
+            lower_air_pressure=lower_air_pressure,
+            upper_air_pressure=upper_air_pressure)
+        if unit.error_code != 0:
+            error = PressureError(work_unit=unit, code=unit.error_code)
             logging.error("Error {} while painting {} ...".format(
                 str(error.code), str(unit.part_id)))
         database.commit()
         logging.warning("Painted unit of work with id = {} cup pressure = {} air cap pressure = {} "
-                        .format(str(unit.part_id), str(unit.cup_pressure.value), str(unit.air_cap_pressure.value)))
-        if unit.part_id % 1000 == 0:
+                        .format(str(unit.part_id), str(unit.cup_pressure), str(unit.air_pressure)))
+        if unit.part_id % batch_size == 0:
             batch_id += 1
 
 
 if __name__ == '__main__':
+    logging.warning("Waiting for mysql service to configure (10s) ...")
     time.sleep(10)
     database.bind(
         provider='mysql',

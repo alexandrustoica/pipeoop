@@ -27,12 +27,13 @@ services:
     image: machine-engine-generator:new
     restart: on-failure
     environment:
+      BATCH_SIZE: 2000
       DB_HOST: 192.168.0.26
       DB_USERNAME: root
       DB_PASSWORD: password
       DB_DATABASE: msg
       DB_PORT: 13306
-      TIME_PRINTING: 30
+      TIME_PRINTING: 1
     ports:
       - 3052:3052
     networks:
