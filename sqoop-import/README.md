@@ -1,71 +1,63 @@
 ### Sqoop Import
 
-1. Connect to `HDFS` container.
-```
-docker exec -it $(docker container ls | grep cloudera | cut -d " " -f1) bash
-```
+Step 1. View all files stored in `HDFS`
 
-2. View all files stored in `HDFS`
 ```commandline
-hadoop fs -ls
+hadoop fs -ls /
 ```
 
-3. Test connection between sqoop and mysql service.
+Step 2. Test connection between sqoop and mysql service.
 
  ```
-sqoop list-tables =\
---connect ”jdbc:mysql://<mysql_ip>:13306/msg” \
+sqoop list-tables \
+--connect ”jdbc:mysql://localhost:3306/msg” \
 --username=root \
---password=password
+--password=cloudera
 ```
 
-> Note: Make sure Docker has 8gb of RAM memory and disk space.
-
-4. Create a file `password` and move it to `HDFS` (used by `sqoop` when executing job).
+Step 3. Create a file `password` and move it to `HDFS` (used by `sqoop` when executing job).
 
 ```
-echo -n 'password' > sqoop.password; hadoop fs -put /sqoop.password /user/root/sqoop.password
+echo -n 'password' > sqoop.password; hadoop fs -put $(pwd)/sqoop.password /team_3/sqoop.password
 ```
 
-> Note: Make sure to add a target directory if you're running this job on UBB.
-5. Create a sqoop job to import all tables from mysql service.
-
+Step 4. Create a sqoop job to import all tables from mysql database.
+> TODO: Import `--increment` each table.
 ```
-sqoop job --create mysql -- import-all-tables \
- --connect jdbc:mysql://<mysql_ip>:<port>/msg \
- --username root --password-file /user/root/sqoop.password
+sqoop job --create mysql_team_3 -- import-all-tables \
+ --connect jdbc:mysql://localhost:3306/msg \
+ --username root --password-file /user/root/sqoop.password --warehouse-dir '/team_3/data/'
 ```
 
-6. Check if the job was created.
+Step 5. Check if the job was created.
 ```
 sqoop job --list
 ```
-
-> Note: You need to delete /user/root/<target-dirs to be able to execute this command multiple times.
-7. Execute sqoop job to make sure everything works.
+ 
+Step 6. Execute sqoop job to make sure everything works.
  
 ```
-hadoop fs -rm -r -skipTrash /user/root/pressureerror; \
-hadoop fs -rm -r -skipTrash /user/root/workunit; \
-sqoop job -exec mysql
+hadoop fs -rm -r -skipTrash /team_3/data/pressureerror; \
+hadoop fs -rm -r -skipTrash /team_3/data/workunit; \
+sqoop job -exec mysql_team_3
 ```
 
-8. Check if everything is imported.
+Step 7. Check if everything is imported.
 
 ```
-hadoop fs -ls /user/root
+hadoop fs -ls /team_3/data
 ```
 
-9. Check a file's content:
+Step 8. Check a file's content:
 ```
-hadoop fs -cat /user/root/pressureerror/part-m-*
+hadoop fs -cat /team_3/data/pressureerror/part-m-*
 ```
 
-10. Create cron job to automate the running our sqoop job.
-# TODO: Check why cron job is not working...
+Step 9. Create cron job to automate the running our sqoop job.
+> TODO: Create Script For This & Batch View Generator 
 ```
 0 0 * * * [user] \
 /usr/bin/hadoop fs -rm -r -skipTrash /user/root/pressureerror; \
 /usr/bin/hadoop fs -rm -r -skipTrash /user/root/workunit; \
-/usr/bin/sqoop job -exec mysql
+/usr/bin/sqoop job -exec mysql_team_3
 ```
