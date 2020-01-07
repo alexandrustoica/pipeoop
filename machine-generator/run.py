@@ -1,11 +1,11 @@
+import getopt
 import random
+import sys
 
 from pony import orm
 from pony.orm import Required, PrimaryKey, db_session, Optional
 from datetime import datetime
 import time
-import os
-import logging
 
 database = orm.Database()
 
@@ -36,16 +36,16 @@ class PressureError(database.Entity):
 
 
 @db_session
-def run():
-    batch_size = int(os.getenv('BATCH_SIZE'))
+def generate(batch_size: int, delay: int):
     batch_id = WorkUnit.select().count() // batch_size + 1
     lower_cup_pressure, upper_cup_pressure = \
         0.5 - random.uniform(0, 0.5), 1 - random.uniform(0, 0.5)
     lower_air_pressure, upper_air_pressure = \
         0.5 - random.uniform(0, 0.5), 1 - random.uniform(0, 0.5)
     while True:
-        logging.warning("Painting a new unit ...")
-        time.sleep(int(os.getenv('TIME_PRINTING')))
+        print("-" * 100)
+        print("Painting a new unit ...")
+        time.sleep(delay)
         unit = WorkUnit(
             batch_id=batch_id,
             timestamp=datetime.now(),
@@ -58,24 +58,34 @@ def run():
             upper_air_pressure=upper_air_pressure)
         if unit.error_code != 0:
             error = PressureError(work_unit=unit, code=unit.error_code)
-            logging.error("Error {} while painting {} ...".format(
+            print("Error {} while painting {} ...".format(
                 str(error.code), str(unit.part_id)))
         database.commit()
-        logging.warning("Painted unit of work with id = {} cup pressure = {} air cap pressure = {} "
-                        .format(str(unit.part_id), str(unit.cup_pressure), str(unit.air_pressure)))
+        print("Painted unit of work with id = {} cup pressure = {} air cap pressure = {} "
+              .format(str(unit.part_id), str(unit.cup_pressure), str(unit.air_pressure)))
         if unit.part_id % batch_size == 0:
             batch_id += 1
 
 
+def main(argv):
+    try:
+        options, args = getopt.getopt(
+            argv, "b:t:", ["host=", "database=", "port=", "username=", "password="])
+        configuration = {key: arg for key, arg in options}
+        print("Connecting to database {--database} on {--host}:{--port} with credentials.".format(**configuration))
+        database.bind(
+            provider='mysql',
+            host=configuration["--host"],
+            port=int(configuration["--port"]),
+            user=configuration["--username"],
+            passwd=configuration["--password"],
+            db=configuration["--database"])
+        database.generate_mapping(create_tables=True)
+        print("Connected!")
+        generate(int(configuration["-b"]), int(configuration["-t"]))
+    except getopt.GetoptError:
+        print("Unrecognised options ...")
+
+
 if __name__ == '__main__':
-    logging.warning("Waiting for mysql service to configure (10s) ...")
-    time.sleep(10)
-    database.bind(
-        provider='mysql',
-        host=os.getenv('DB_HOST'),
-        port=int(os.getenv('DB_PORT')),
-        user=os.getenv('DB_USERNAME'),
-        passwd=os.getenv('DB_PASSWORD'),
-        db=os.getenv('DB_DATABASE'))
-    database.generate_mapping(create_tables=True)
-    run()
+    main(sys.argv[1:])
