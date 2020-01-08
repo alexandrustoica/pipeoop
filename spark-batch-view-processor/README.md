@@ -1,5 +1,5 @@
 ##### How To Run
 
 ```
-spark-submit process.py
+hdfs dfs -rm -r /team_3/result ; spark-submit pipeoop/spark-batch-view-processor/process.py
 ```
