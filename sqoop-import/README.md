@@ -24,9 +24,22 @@ echo -n 'password' > sqoop.password; hadoop fs -put $(pwd)/sqoop.password /team_
 Step 4. Create a sqoop job to import all tables from mysql database.
 > TODO: Import `--increment` each table.
 ```
-sqoop job --create mysql_team_3 -- import-all-tables \
- --connect jdbc:mysql://localhost:3306/msg \
- --username root --password-file /user/root/sqoop.password --warehouse-dir '/team_3/data/'
+sqoop job --create import_pressure_error_job -- import \
+--connect "jdbc:mysql://localhost:3306/msg" \
+--username root --password-file /team_3/sqoop.password \
+--table pressureerror -m 1 \
+--incremental append \
+--check-column id \
+--last-value 0 \
+--target-dir /team_3/data/pressure_error/
+
+sqoop job --create import_workunit_job -- import \
+--connect "jdbc:mysql://localhost:3306/msg" \
+--username root --password-file /team_3/sqoop.password \
+--table workunit -m 1 --incremental append \
+--check-column part_id \
+--last-value 0 \
+--target-dir /team_3/data/workunit/
 ```
 
 Step 5. Check if the job was created.
@@ -37,9 +50,9 @@ sqoop job --list
 Step 6. Execute sqoop job to make sure everything works.
  
 ```
-hadoop fs -rm -r -skipTrash /team_3/data/pressureerror; \
-hadoop fs -rm -r -skipTrash /team_3/data/workunit; \
-sqoop job -exec mysql_team_3
+sqoop job -exec import_workunit_job
+sqoop job -exec import_pressure_error_job
+
 ```
 
 Step 7. Check if everything is imported.
@@ -50,7 +63,8 @@ hadoop fs -ls /team_3/data
 
 Step 8. Check a file's content:
 ```
-hadoop fs -cat /team_3/data/pressureerror/part-m-*
+hadoop fs -cat /team_3/data/pressure_error/part-m-*
+hadoop fs -cat /team_3/data/workunit/part-m-*
 ```
 
 Step 9. Create cron job to automate the running our sqoop job.
