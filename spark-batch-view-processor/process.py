@@ -22,7 +22,7 @@ time.sleep(5)
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger()
 
-cluster = Cluster(['192.168.0.26'], port=9042)
+cluster = Cluster(['cassandra'], port=9042)
 session = cluster.connect()
 
 log.info("Create keyspace if needed...")

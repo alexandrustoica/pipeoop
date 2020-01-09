@@ -1,4 +1,3 @@
-
 ## Spray Gun Machine Data Generator
 
 ##### How To Run
@@ -12,4 +11,3 @@ python3 run.py --host="<ip>" --username="root" --password="password" --database=
 ```shell script
 pip3 install -r "requirements.txt"
 ```
-

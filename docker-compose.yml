@@ -14,18 +14,45 @@ services:
       - CASSANDRA_DC=datacenter
     networks:
       - pipeoop
+    volumes:
+      - 'cassandra_data:/msg'
 
   pyspark-batch-view-service:
     build: ./spark-batch-view-processor
     image: spark-batch-view-processor:new
     environment:
-      - CASSANDRA-IP=172.23.0.2
+      - CASSANDRA-IP=cassandra
     ports:
       - 8888:8888
     networks:
       - pipeoop
+    links:
+      - cassandra
     depends_on:
       - cassandra
+
+  zeppelin:
+    container_name: zeppelin
+    image: xemuliam/zeppelin:latest
+    ports:
+      - 8080:8080
+      - 8443:8443
+    volumes:
+      - ./notebook:/opt/zeppelin/notebook
+    environment:
+      ZEPPELIN_PORT: 8080
+      ZEPPELIN_JAVA_OPTS: >-
+        -Dspark.driver.memory=1g
+        -Dspark.executor.memory=2g
+      SPARK_SUBMIT_OPTIONS: >-
+        --conf spark.driver.host=localhost
+        --conf spark.driver.port=8081
+    depends_on:
+      - cassandra
+    links:
+      - cassandra
+    networks:
+      - pipeoop
 
 volumes:
   cassandra_data:
