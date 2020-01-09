@@ -2,92 +2,34 @@ version: '3'
 
 services:
 
-  machine-engine-db:
-    image: mysql:5.7
-    tty: true
-    stdin_open: true
-    privileged: true
+  cassandra:
+    container_name: cassandra
+    image: cassandra:latest
     ports:
-      - 13306:3306
-    restart: always
-    command: --default-authentication-plugin=mysql_native_password
+      - 9042:9042
     environment:
-      MYSQL_DATABASE: msg
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: password
-    volumes:
-      - machine-db:/var/lib/mysql
-      - ./mysql-machine-generator/mysqld.cnf:/etc/conf.d
+      - CASSANDRA_START_RPC=true
+      - CASSANDRA_CLUSTER_NAME=MyCluster
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - CASSANDRA_DC=datacenter
     networks:
-      - machine-engine
+      - pipeoop
 
-  machine-engine-generator:
-    build: ./machine-generator
-    image: machine-engine-generator:new
-    restart: on-failure
+  pyspark-batch-view-service:
+    build: ./spark-batch-view-processor
+    image: spark-batch-view-processor:new
     environment:
-      BATCH_SIZE: 2000
-      DB_HOST: 192.168.0.26
-      DB_USERNAME: root
-      DB_PASSWORD: password
-      DB_DATABASE: msg
-      DB_PORT: 13306
-      TIME_PRINTING: 1
+      - CASSANDRA-IP=172.23.0.2
     ports:
-      - 3052:3052
+      - 8888:8888
     networks:
-      - machine-engine
+      - pipeoop
     depends_on:
-      - machine-engine-db
-    links:
-      - machine-engine-db:mysql
-
-  cloudera-service:
-    image: cloudera/quickstart:latest
-    privileged: true
-    environment:
-      DB_HOST: 192.168.0.26
-      DB_USERNAME: root
-      DB_PASSWORD: password
-      DB_DATABASE: msg
-      DB_PORT: 13306
-    volumes:
-      - cloudera:/var/lib
-    tty: true
-    stdin_open: true
-    hostname: quickstart.cloudera
-    command: /usr/bin/docker-quickstart
-    ports:
-      - "8020:8020"   # HDFS
-      - "8022:22"     # SSH
-      - "7180:7180"   # Cloudera Manager
-      - "8888:8888"   # Hue
-      - "11000:11000" # Oozie
-      - "50070:50070" # HDFS Rest Namenode
-      - "50075:50075" # HDFS Rest Datanode
-      - "2181:2181"   # Zookeeper
-      - "8088:8088"   # YARN Resource Manager
-      - "19888:19888" # MapReduce Job History
-      - "50030:50030" # MapReduce Job Tracker
-      - "8983:8983"   # Solr
-      - "16000:16000" # Sqoop Metastore
-      - "8042:8042"   # YARN Node Manager
-      - "60010:60010" # HBase Master
-      - "60030:60030" # HBase Region
-      - "9090:9090"   # HBase Thrift
-      - "8080:8080"   # HBase Restg
-      - "7077:7077"   # Spark Master
-    networks:
-      - machine-engine
-    depends_on:
-      - machine-engine-db
-    links:
-      - machine-engine-db:mysql
+      - cassandra
 
 volumes:
-  machine-db:
-  cloudera:
+  cassandra_data:
+    driver: local
 
 networks:
-  machine-engine:
+  pipeoop:
