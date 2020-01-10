@@ -15,7 +15,9 @@ services:
     networks:
       - pipeoop
     volumes:
-      - 'cassandra_data:/msg'
+      - ./cassandra/config/collectd.cassandra.conf:/etc/collectd/collectd.conf
+      - ./cassandra/config/prometheus.yml:/prometheus/prometheus.yml
+      - ./data/cassandra:/var/lib/cassandra
 
   pyspark-batch-view-service:
     build: ./spark-batch-view-processor
@@ -40,6 +42,7 @@ services:
     volumes:
       - ./notebook:/opt/zeppelin/notebook
     environment:
+      CASSANDRA_HOST: cassandra
       ZEPPELIN_PORT: 8080
       ZEPPELIN_JAVA_OPTS: >-
         -Dspark.driver.memory=1g
