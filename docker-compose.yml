@@ -18,6 +18,7 @@ services:
       - ./cassandra/config/collectd.cassandra.conf:/etc/collectd/collectd.conf
       - ./cassandra/config/prometheus.yml:/prometheus/prometheus.yml
       - ./data/cassandra:/var/lib/cassandra
+      - dataabse
 
   pyspark-batch-view-service:
     build: ./spark-batch-view-processor
@@ -40,7 +41,9 @@ services:
       - 8080:8080
       - 8443:8443
     volumes:
-      - ./notebook:/opt/zeppelin/notebook
+      - ./zeppelin-ui/logs:/logs
+      - ./zeppelin-ui/notebook:/opt/zeppelin/notebook
+      - ./zeppelin-ui/settings.json:/opt/zeppelin/interpreter/cassandra/interpreter-setting.json
     environment:
       CASSANDRA_HOST: cassandra
       ZEPPELIN_PORT: 8080
@@ -50,6 +53,9 @@ services:
       SPARK_SUBMIT_OPTIONS: >-
         --conf spark.driver.host=localhost
         --conf spark.driver.port=8081
+        --conf cassandra.hosts=cassandra
+      CASSANDRA_SUBMIT_OPTIONS: >-
+        --conf cassandra.hosts=cassandra
     depends_on:
       - cassandra
     links:
@@ -58,8 +64,7 @@ services:
       - pipeoop
 
 volumes:
-  cassandra_data:
-    driver: local
+  database:
 
 networks:
   pipeoop:
