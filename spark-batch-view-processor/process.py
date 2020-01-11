@@ -145,13 +145,12 @@ error_count = [BatchErrorCounter(batch_id, ErrorCounter(type_1, type_2, type_3))
 
 [print(x) for x in error_count]
 
-# print("Waiting 5s to connect to Cassandra database...")
-# time.sleep(5)
+print("Connecting to cassandra database...")
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger()
 
-cluster = Cluster(['cassandra'], port=9042)
+cluster = Cluster(['localhost'], port=9042)
 session = cluster.connect()
 
 log.info("Create keyspace if needed...")
@@ -161,9 +160,6 @@ session.execute("""
        WITH REPLICATION =
        { 'class' : 'SimpleStrategy', 'replication_factor' : '1' }
        """)
-
-for x in session.execute('SELECT * FROM system_schema.keyspaces'):
-    print(x)
 
 session.set_keyspace('msg')
 
