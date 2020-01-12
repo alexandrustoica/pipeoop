@@ -1,0 +1,21 @@
+package main;
+import platforms.xdk110;
+
+setup wifi: WLAN {
+	ssid = "<network-name>";
+	authentication = Personal(psk = "<network-password>");
+}
+
+setup backend: MQTT {
+  transport = wifi;
+  url = "mqtt://<local-ip>:1883";
+  clientId = "xdk110";
+  var pressure_topic = topic("topic/team_3/sensor/pressure");
+}
+
+every 1 second {
+	let x = accelerometer.x_axis.read() as int16;
+	let y = accelerometer.y_axis.read() as int16;
+	println(`cup_pressure: ${x}, air_pressure: ${y}`);
+	backend.pressure_topic.write(`${x}-${y}`);
+}

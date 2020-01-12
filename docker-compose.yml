@@ -2,69 +2,21 @@ version: '3'
 
 services:
 
-  cassandra:
-    container_name: cassandra
-    image: cassandra:latest
+  mosquitto:
+    image: eclipse-mosquitto
+    restart: always
+    hostname: mosquitto
+    container_name: mosquitto
     ports:
-      - 9042:9042
-    environment:
-      - CASSANDRA_START_RPC=true
-      - CASSANDRA_CLUSTER_NAME=MyCluster
-      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
-      - CASSANDRA_DC=datacenter
-    networks:
-      - pipeoop
-    volumes:
-      - ./cassandra/config/collectd.cassandra.conf:/etc/collectd/collectd.conf
-      - ./cassandra/config/prometheus.yml:/prometheus/prometheus.yml
-      - ./data/cassandra:/var/lib/cassandra
-      - dataabse
+      - "1883:1883"
+      - "9001:9001"
 
-  pyspark-batch-view-service:
-    build: ./spark-batch-view-processor
-    image: spark-batch-view-processor:new
-    environment:
-      - CASSANDRA-IP=cassandra
-    ports:
-      - 8888:8888
-    networks:
-      - pipeoop
-    links:
-      - cassandra
+  proxy-mqtt-service:
+    build:
+      context: ./proxy-mqtt-service
+      dockerfile: Dockerfile
+    image: proxy-mqtt-service:new
+    container_name: proxy-mqtt
+    network_mode: "host"
     depends_on:
-      - cassandra
-
-  zeppelin:
-    container_name: zeppelin
-    image: xemuliam/zeppelin:latest
-    ports:
-      - 8080:8080
-      - 8443:8443
-    volumes:
-      - ./zeppelin-ui/logs:/logs
-      - ./zeppelin-ui/notebook:/opt/zeppelin/notebook
-      - ./zeppelin-ui/settings.json:/opt/zeppelin/interpreter/cassandra/interpreter-setting.json
-    environment:
-      CASSANDRA_HOST: cassandra
-      ZEPPELIN_PORT: 8080
-      ZEPPELIN_JAVA_OPTS: >-
-        -Dspark.driver.memory=1g
-        -Dspark.executor.memory=2g
-      SPARK_SUBMIT_OPTIONS: >-
-        --conf spark.driver.host=localhost
-        --conf spark.driver.port=8081
-        --conf cassandra.hosts=cassandra
-      CASSANDRA_SUBMIT_OPTIONS: >-
-        --conf cassandra.hosts=cassandra
-    depends_on:
-      - cassandra
-    links:
-      - cassandra
-    networks:
-      - pipeoop
-
-volumes:
-  database:
-
-networks:
-  pipeoop:
+      - mosquitto
